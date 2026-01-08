@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Quran.Api/Quran.Api.csproj" />
+  <Project Path="Quran.Core/Quran.Core.csproj" />
+  <Project Path="Quran.Data/Quran.Data.csproj" />
+  <Project Path="Quran.Infrastructure/Quran.Infrastructure.csproj" />
+  <Project Path="Quran.Services/Quran.Services.csproj" />
+</Solution>
