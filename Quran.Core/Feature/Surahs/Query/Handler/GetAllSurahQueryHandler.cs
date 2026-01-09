@@ -1,0 +1,27 @@
+﻿using MediatR;
+using Quran.Core.Feature.Surahs.Query.Model;
+using Quran.Services.Abstract;
+using Quran.Services.Dto;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace Quran.Core.Feature.Surahs.Query.Handler
+{
+    public class GetAllSurahQueryHandler:IRequestHandler<GetAllSurahQuery, ApiResponse<List<SurahDto>>>
+    {
+        private readonly ISurahService _surahService;
+        public GetAllSurahQueryHandler(ISurahService surahService)
+        {
+            _surahService = surahService;
+        }
+
+        public async Task<ApiResponse<List<SurahDto>>> Handle(GetAllSurahQuery request, CancellationToken cancellationToken)
+        {
+            var surahs = await _surahService.GetAllSurahsAsync();
+            return surahs;
+        }
+    }
+}
