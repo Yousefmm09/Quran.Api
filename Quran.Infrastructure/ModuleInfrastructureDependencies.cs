@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
+using Quran.Infrastructure.Abstract;
+using Quran.Infrastructure.Implementation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,6 +13,7 @@ namespace Quran.Infrastructure
     {
        public static IServiceCollection GetService(this IServiceCollection services)
         { 
+            services.AddTransient<ISurahRepo, SurahRepo>();
             return services;
         }
     }

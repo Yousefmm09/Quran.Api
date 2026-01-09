@@ -1,7 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
-using Quran.Api.MiddleWare.Quran.API.Middlewares;
+using Quran.Core;
+using Quran.Infrastructure;
 using Quran.Infrastructure.Context;
+using Quran.Services;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -29,7 +31,7 @@ builder.Services.AddDbContext<AppDb>(options =>
             );
         });
 });
-
+builder.Services.getService().AddCoreDepndencies().GetService();
 
 builder.Services.AddControllers();
 
@@ -71,18 +73,19 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
+
 app.UseHttpsRedirection();
 
 app.UseRouting();
 
 // Global Exception Handling Middleware
-app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 app.UseAuthorization();
 

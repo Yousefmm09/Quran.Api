@@ -19,4 +19,9 @@
     <ProjectReference Include="..\Quran.Services\Quran.Services.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Feature\Surahs\Command\Handler\" />
+    <Folder Include="Feature\Surahs\Command\Model\" />
+  </ItemGroup>
+
 </Project>
