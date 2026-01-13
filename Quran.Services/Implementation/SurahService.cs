@@ -67,8 +67,10 @@ namespace Quran.Services.Implementation
             var verses = verse.Select(x => new VersesDto
             {
                 Id= x.Id,
+                Number = x.Number,
                 VersesNumber=x.Number,
                 TextAr = x.TextAr,
+                TextArabicSearch = x.TextArabicSearch
 
             }).ToList();
             Log.Information($"Verses: {surahId}");

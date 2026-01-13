@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Quran.Core;
 using Quran.Infrastructure;
@@ -34,6 +35,17 @@ builder.Services.AddDbContext<AppDb>(options =>
 builder.Services.getService().AddCoreDepndencies().GetService();
 
 builder.Services.AddControllers();
+builder.Services.AddMiniProfiler(options =>
+{
+    options.RouteBasePath = "/profiler";
+
+    options.TrackConnectionOpenClose = true;
+    options.PopupRenderPosition = StackExchange.Profiling.RenderPosition.BottomRight;
+
+    options.ColorScheme = StackExchange.Profiling.ColorScheme.Auto;
+})
+.AddEntityFramework();
+
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -70,14 +82,15 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
 });
-
 var app = builder.Build();
+
 
 
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseMiniProfiler();
 }
 
 
@@ -88,6 +101,7 @@ app.UseRouting();
 // Global Exception Handling Middleware
 
 app.UseAuthorization();
+app.UseMiniProfiler();
 
 app.MapControllers();
 
