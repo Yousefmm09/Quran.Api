@@ -15,6 +15,7 @@ namespace Quran.Services
         {
             services.AddTransient<ISurahService, SurahService>();
             services.AddTransient<IVerses, VersesService>();
+            services.AddTransient<IAudioService, AudioService>();
             return services;
         }
     }

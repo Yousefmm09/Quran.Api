@@ -20,6 +20,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="Feature\Audio\Command\Handler\" />
+    <Folder Include="Feature\Audio\Command\Model\" />
     <Folder Include="Feature\Verses\Command\Handler\" />
     <Folder Include="Feature\Verses\Command\Model\" />
     <Folder Include="Feature\Surahs\Command\Handler\" />

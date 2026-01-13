@@ -1,5 +1,4 @@
-﻿using Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Quran.Core;
 using Quran.Infrastructure;
@@ -33,6 +32,7 @@ builder.Services.AddDbContext<AppDb>(options =>
         });
 });
 builder.Services.getService().AddCoreDepndencies().GetService();
+
 
 builder.Services.AddControllers();
 builder.Services.AddMiniProfiler(options =>

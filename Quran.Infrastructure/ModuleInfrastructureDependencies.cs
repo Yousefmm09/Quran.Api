@@ -15,6 +15,7 @@ namespace Quran.Infrastructure
         { 
             services.AddTransient<ISurahRepo, SurahRepo>();
             services.AddTransient<IVersesRepo, Verses>();
+            services.AddTransient<IAudioRepo, AudioRepo>();
             return services;
         }
     }
