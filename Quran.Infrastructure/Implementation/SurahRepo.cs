@@ -32,10 +32,10 @@ namespace Quran.Infrastructure.Implementation
                 .ToListAsync();
         }
 
-        public Task<Surah?> GetSurahByIdAsync(int id)
+        public async Task<Surah?> GetSurahByIdAsync(int id)
         {
             var surah = _appDb.Surah.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id);
-            return surah;
+         return await surah;
         }
         public string GetSurahNameAsync(int id)
         {
@@ -44,11 +44,12 @@ namespace Quran.Infrastructure.Implementation
         }
         public async Task<List<Verse>> GetVersesBySurahId(int surahId)
         {
-            var surah = await _appDb.Verses.Include(x => x.Surah).Where(x => x.SurahId == surahId)
+            var surah = await _appDb.Verses.Where(x => x.SurahId == surahId)
                 .Select(x => new Verse
                 {
                     Id = x.Id,
                     TextAr=x.TextAr,
+                    TextArabicSearch = x.TextArabicSearch,
                     Number = x.Number
                 }).ToListAsync();
             return surah;

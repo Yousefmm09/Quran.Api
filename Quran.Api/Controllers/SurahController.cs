@@ -29,7 +29,7 @@ namespace Quran.Api.Controllers
             var query = new GetSurahByIdQuery { Id = id };
             return _mediator.Send(query);
         }
-        [HttpGet("{id}/verses")]
+        [HttpGet("{id:int}/verses")]
         public async Task<ApiResponse<List<VersesDto>>> getVerseSurahbyId(int id)
         {
             var query =   new GetVersesSurahByIdQuery { Id=id};

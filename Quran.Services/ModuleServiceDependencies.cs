@@ -14,6 +14,7 @@ namespace Quran.Services
         public static IServiceCollection getService (this IServiceCollection services)
         {
             services.AddTransient<ISurahService, SurahService>();
+            services.AddTransient<IVerses, VersesService>();
             return services;
         }
     }

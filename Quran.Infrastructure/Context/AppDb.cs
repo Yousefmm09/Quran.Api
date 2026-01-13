@@ -7,7 +7,7 @@ namespace Quran.Infrastructure.Context
 {
     public class AppDb :DbContext
     {
-      
+
         public AppDb(DbContextOptions<AppDb> options) : base(options)
         {
         }
@@ -45,12 +45,11 @@ namespace Quran.Infrastructure.Context
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.TextAr).IsRequired();
+                entity.Property(e => e.TextArabicSearch).HasMaxLength(2000);
                 entity.Property(e => e.TextEn).IsRequired();
                 entity.Property(e => e.HasSajda).IsRequired();
                 entity.Property(e => e.SajdaId).IsRequired(false);
-                entity.Property(e => e.SajdaRecommended).IsRequired(false);
-                entity.Property(e => e.SajdaObligatory).IsRequired(false);
-
+               entity.Property(e=>e.StopVerse).IsRequired();
                 // Index for querying sajda verses
                 entity.HasIndex(e => e.HasSajda);
             });

@@ -9,7 +9,9 @@ namespace Quran.Services.Dto
     public class VersesDto
     {
         public int Id { get; set; }
+        public int Number { get; set; }
         public string TextAr { get; set; }
+        public string? TextArabicSearch { get; set; }
         public int VersesNumber { get; set; }
         public IQueryable<string> SurahName {  get; set; }
     }

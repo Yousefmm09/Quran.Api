@@ -1,218 +1,158 @@
-﻿// Data/QuranDataSeeder.cs
-using Microsoft.EntityFrameworkCore;
-using Quran.Data.Entities;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Quran.Infrastructure.Context;
-using Quran.Infrastructure.Seeder;
 using System.Text.Json;
 
-public class QuranDataSeeder
+namespace Infrastructure.Data
 {
-    private readonly AppDb _context;
-    private readonly string _surahFolderPath;
-    private readonly List<string> _errorDetails = new();
-
-    public QuranDataSeeder(AppDb context, string surahFolderPath)
+    public class QuranSeeder
     {
-        _context = context;
-        _surahFolderPath = surahFolderPath;
-    }
+        private readonly AppDb _context;
+        private readonly ILogger<QuranSeeder> _logger;
 
-    public async Task SeedAsync()
-    {
-        if (await _context.Surah.AnyAsync())
+        public QuranSeeder(AppDb context, ILogger<QuranSeeder> logger)
         {
-            Console.WriteLine("Database already seeded. Skipping...");
-            return;
+            _context = context;
+            _logger = logger;
         }
 
-        Console.WriteLine("Starting Quran data seeding...");
-        Console.WriteLine($"Reading from folder: {_surahFolderPath}");
-
-        try
+        /// <summary>
+        /// إزالة التشكيل والحركات من النص العربي
+        /// </summary>
+        private static string RemoveArabicDiacritics(string text)
         {
-            var jsonFiles = Directory.GetFiles(_surahFolderPath, "surah_*.json")
-                                     .OrderBy(f => GetSurahNumber(f))
-                                     .ToList();
+            if (string.IsNullOrEmpty(text))
+                return text;
 
-            if (!jsonFiles.Any())
+            // Arabic diacritics Unicode ranges
+            char[] arabicDiacritics = new char[]
             {
-                Console.WriteLine("No surah JSON files found!");
-                return;
+                '\u064B', // Fathatan
+                '\u064C', // Dammatan
+                '\u064D', // Kasratan
+                '\u064E', // Fatha
+                '\u064F', // Damma
+                '\u0650', // Kasra
+                '\u0651', // Shadda
+                '\u0652', // Sukun
+                '\u0653', // Maddah
+                '\u0654', // Hamza Above
+                '\u0655', // Hamza Below
+                '\u0656', // Subscript Alef
+                '\u0657', // Inverted Damma
+                '\u0658', // Mark Noon Ghunna
+                '\u0670', // Superscript Alef
+            };
+
+            foreach (var diacritic in arabicDiacritics)
+            {
+                text = text.Replace(diacritic.ToString(), "");
             }
 
-            Console.WriteLine($"Found {jsonFiles.Count} surah files to process.");
-            Console.WriteLine(new string('-', 80));
+            return text.Trim();
+        }
 
-            int successCount = 0;
-            int errorCount = 0;
-
-            foreach (var jsonFile in jsonFiles)
+        public async Task SeedTextArabicSearchFromJson(string jsonFilePath)
+        {
+            try
             {
-                var fileName = Path.GetFileName(jsonFile);
+                _logger.LogInformation("Starting to seed TextArabicSearch from JSON...");
 
-                try
+                // 1. قراءة الملف
+                if (!File.Exists(jsonFilePath))
                 {
-                    var jsonContent = await File.ReadAllTextAsync(jsonFile);
+                    _logger.LogError($"JSON file not found: {jsonFilePath}");
+                    return;
+                }
 
-                    // Try to deserialize
-                    var surahDto = JsonSerializer.Deserialize<SurahDto>(jsonContent, new JsonSerializerOptions
-                    {
-                        PropertyNameCaseInsensitive = true,
-                        AllowTrailingCommas = true,
-                        ReadCommentHandling = JsonCommentHandling.Skip
-                    });
+                string jsonContent = await File.ReadAllTextAsync(jsonFilePath);
 
-                    if (surahDto == null)
+                // 2. Parse JSON
+                var options = new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                };
+                var quranData = JsonSerializer.Deserialize<Dictionary<string, List<VerseJson>>>(jsonContent, options);
+
+                if (quranData == null || !quranData.Any())
+                {
+                    _logger.LogError("JSON file is empty or invalid");
+                    return;
+                }
+
+                // 3. حساب عدد الآيات
+                int totalVerses = quranData.Sum(x => x.Value.Count);
+                _logger.LogInformation($"Found {totalVerses} verses in JSON");
+
+                // 4. معالجة كل سورة - تحسين الأداء بتحميل كل السورة مرة واحدة
+                int processedCount = 0;
+                int updatedCount = 0;
+
+                foreach (var surah in quranData.OrderBy(x => int.Parse(x.Key)))
+                {
+                    int surahNumber = int.Parse(surah.Key);
+                    var versesJson = surah.Value.OrderBy(v => v.Verse).ToList();
+
+                    _logger.LogInformation($"Processing Surah {surahNumber} with {versesJson.Count} verses...");
+
+                    // تحميل كل آيات السورة مرة واحدة
+                    var versesInDb = await _context.Verses
+                        .Where(v => v.SurahId == surahNumber)
+                        .ToListAsync();
+
+                    foreach (var verseJson in versesJson)
                     {
-                        errorCount++;
-                        var error = $"{fileName}: Deserialization returned null";
-                        _errorDetails.Add(error);
-                        Console.WriteLine($"✗ [{errorCount:000}] {error}");
-                        continue;
+                        // البحث عن الآية في القائمة المحملة
+                        var verseInDb = versesInDb.FirstOrDefault(v => v.Number == verseJson.Verse);
+                        
+                        if (verseInDb == null)
+                        {
+                            _logger.LogWarning(
+                                $"Verse not found in DB: Surah {surahNumber}, Verse {verseJson.Verse}");
+                            processedCount++;
+                            continue;
+                        }
+
+                        // تحديث TextArabicSearch - إزالة التشكيل
+                        if (!string.IsNullOrEmpty(verseJson.Text))
+                        {
+                            verseInDb.TextArabicSearch = RemoveArabicDiacritics(verseJson.Text);
+                            updatedCount++;
+                        }
+
+                        processedCount++;
                     }
-
-                    // Validate required fields
-                    if (string.IsNullOrEmpty(surahDto.Name?.Ar) || string.IsNullOrEmpty(surahDto.Name?.En))
-                    {
-                        errorCount++;
-                        var error = $"{fileName}: Missing required name fields";
-                        _errorDetails.Add(error);
-                        Console.WriteLine($"✗ [{errorCount:000}] {error}");
-                        continue;
-                    }
-
-                    var surah = MapToSurah(surahDto);
-                    _context.Surah.Add(surah);
-
-                    successCount++;
-                    Console.WriteLine($"✓ [{successCount:000}] {fileName,-20} | Surah {surah.Number:000}: {surah.NameEn,-25} | V:{surah.VersesCount:000} | A:{surah.AudioRecitations.Count:000}");
+                    
+                    // حفظ بعد كل سورة لتجنب مشاكل الأداء
+                    await _context.SaveChangesAsync();
+                    _logger.LogInformation($"Progress: {processedCount}/{totalVerses} verses processed...");
                 }
-                catch (JsonException jsonEx)
-                {
-                    errorCount++;
-                    var error = $"{fileName}: JSON Error at {jsonEx.Path} - {jsonEx.Message}";
-                    _errorDetails.Add(error);
-                    Console.WriteLine($"✗ [{errorCount:000}] {error}");
-                }
-                catch (Exception ex)
-                {
-                    errorCount++;
-                    var error = $"{fileName}: {ex.GetType().Name} - {ex.Message}";
-                    _errorDetails.Add(error);
-                    Console.WriteLine($"✗ [{errorCount:000}] {error}");
-                }
-            }
 
-            Console.WriteLine(new string('-', 80));
-
-            if (successCount > 0)
-            {
-                Console.WriteLine("Saving to database...");
+                // حفظ نهائي
                 await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"✅ Seeding completed!");
+                _logger.LogInformation($"Processed: {processedCount} verses");
+                _logger.LogInformation($"Updated: {updatedCount} verses");
             }
-
-            Console.WriteLine(new string('=', 80));
-            Console.WriteLine("SEEDING SUMMARY");
-            Console.WriteLine(new string('=', 80));
-            Console.WriteLine($"✓ Success: {successCount}/{jsonFiles.Count} surahs seeded");
-
-            if (successCount > 0)
+            catch (Exception ex)
             {
-                Console.WriteLine($"  • Total verses: {await _context.Verses.CountAsync()}");
-                Console.WriteLine($"  • Total audio recitations: {await _context.AudioRecitations.CountAsync()}");
+                _logger.LogError(ex, "Error during seeding");
+                throw;
             }
-
-            if (errorCount > 0)
-            {
-                Console.WriteLine($"\n⚠ Errors: {errorCount} files failed");
-                Console.WriteLine(new string('-', 80));
-                Console.WriteLine("ERROR DETAILS:");
-                foreach (var error in _errorDetails)
-                {
-                    Console.WriteLine($"  • {error}");
-                }
-            }
-
-            Console.WriteLine(new string('=', 80));
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"✗ CRITICAL ERROR: {ex.Message}");
-            Console.WriteLine($"Stack Trace: {ex.StackTrace}");
-            throw;
         }
     }
 
-    private int GetSurahNumber(string filePath)
+    // Model للـ JSON
+    public class VerseJson
     {
-        var fileName = Path.GetFileNameWithoutExtension(filePath);
-        var numberPart = fileName.Replace("surah_", "");
-        return int.TryParse(numberPart, out int number) ? number : 0;
-    }
-
-    // Data/QuranDataSeeder.cs
-    private Surah MapToSurah(SurahDto dto)
-    {
-        var surah = new Surah
-        {
-            Number = dto.Number,
-            NameAr = dto.Name?.Ar ?? "Unknown",
-            NameEn = dto.Name?.En ?? "Unknown",
-            Transliteration = dto.Name?.Transliteration ?? "",
-            RevelationPlaceAr = dto.RevelationPlace?.Ar ?? "",
-            RevelationPlaceEn = dto.RevelationPlace?.En ?? "",
-            VersesCount = dto.VersesCount,
-            WordsCount = dto.WordsCount,
-            LettersCount = dto.LettersCount,
-            Verses = new List<Verse>(),
-            AudioRecitations = new List<AudioRecitation>()
-        };
-
-        if (dto.Verses != null && dto.Verses.Any())
-        {
-            foreach (var verseDto in dto.Verses)
-            {
-                if (verseDto?.Text != null)
-                {
-                    var sajda = verseDto.Sajda;
-
-                    surah.Verses.Add(new Verse
-                    {
-                        Number = verseDto.Number,
-                        TextAr = verseDto.Text.Ar ?? "",
-                        TextEn = verseDto.Text.En ?? "",
-                        Juz = verseDto.Juz,
-                        Page = verseDto.Page,
-                        HasSajda = sajda?.HasSajda ?? false,
-                        SajdaId = sajda?.Id,
-                        SajdaRecommended = sajda?.Recommended,
-                        SajdaObligatory = sajda?.Obligatory
-                    });
-                }
-            }
-        }
-
-        // Audio mapping remains the same
-        if (dto.Audio != null && dto.Audio.Any())
-        {
-            foreach (var audioDto in dto.Audio)
-            {
-                if (audioDto?.Reciter != null && audioDto?.Rewaya != null)
-                {
-                    surah.AudioRecitations.Add(new AudioRecitation
-                    {
-                        ReciterId = audioDto.Id,
-                        ReciterNameAr = audioDto.Reciter.Ar ?? "",
-                        ReciterNameEn = audioDto.Reciter.En ?? "",
-                        RewayaAr = audioDto.Rewaya.Ar ?? "",
-                        RewayaEn = audioDto.Rewaya.En ?? "",
-                        Server = audioDto.Server ?? "",
-                        Link = audioDto.Link ?? ""
-                    });
-                }
-            }
-        }
-
-        return surah;
+        [System.Text.Json.Serialization.JsonPropertyName("chapter")]
+        public int Chapter { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("verse")]
+        public int Verse { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("text")]
+        public string? Text { get; set; }
     }
 }
