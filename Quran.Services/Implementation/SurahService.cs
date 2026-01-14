@@ -73,17 +73,29 @@ namespace Quran.Services.Implementation
             var cacheKey = $"surah_{id}";
             if(_memory.TryGetValue(cacheKey, out SurahDto? cachedSurah))
             {
-                var surah = await _surah.GetSurahByIdAsync(id);
-                Log.Information("Retrieved surah with ID {Id}: {Surah}", id, surah != null ? surah.NameEn : "Not Found");
-                var option = new MemoryCacheEntryOptions()
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-                    Priority = CacheItemPriority.High,
-                    SlidingExpiration = TimeSpan.FromMinutes(5)
-
-                };
-                _memory.Set(cacheKey, cachedSurah, option);
+                return new ApiResponse<SurahDto?>(
+                    Success: true,
+                    Message: "Surah retrieved successfully from cache",
+                    Data: cachedSurah,
+                    Errors: null,
+                    TraceId: Guid.NewGuid().ToString()
+                );
             }
+
+            var surah = await _surah.GetSurahByIdAsync(id);
+            if (surah != null)
+            {
+                cachedSurah = new SurahDto
+                {
+                    Id = surah.Id,
+                    Name = surah.NameAr,
+                    NumberOfSurah = surah.Number,
+                    RevelationType = surah.RevelationPlaceAr,
+                    VerserCount = surah.VersesCount,
+                };
+                _memory.Set(cacheKey, cachedSurah);
+            }
+
             return new ApiResponse<SurahDto?>(
                 Success: cachedSurah != null,
                 Message: cachedSurah != null ? "Surah retrieved successfully" : "Surah not found",
@@ -96,34 +108,65 @@ namespace Quran.Services.Implementation
         public async Task<ApiResponse<List<VersesDto>>> GetVersesBySurahId(int surahId)
         {
             var cacheKey = $"verses_surah_{surahId}";
+
+            // 1️⃣ Try cache first (Correct usage)
             if (_memory.TryGetValue(cacheKey, out List<VersesDto> cachedVerses))
             {
-                var verse = await _surah.GetVersesBySurahId(surahId);
-                var surahName = _surah.GetSurahNameAsync(surahId);
-                var verses = verse.Select(x => new VersesDto
-                {
-                    Id = x.Id,
-                    Number = x.Number,
-                    VersesNumber = x.Number,
-                    TextAr = x.TextAr,
-                    TextArabicSearch = x.TextArabicSearch
-                }).ToList();
-                var option = new MemoryCacheEntryOptions()
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-                    Priority = CacheItemPriority.High,
-                    SlidingExpiration = TimeSpan.FromMinutes(5)
-                };
-                _memory.Set(cacheKey, verses, option);
+                return new ApiResponse<List<VersesDto>>(
+                    Success: true,
+                    Message: "Verses retrieved successfully (from cache)",
+                    Data: cachedVerses,
+                    Errors: null,
+                    TraceId: Guid.NewGuid().ToString()
+                );
             }
+
+            // 2️⃣ Fetch from DB
+            var versesFromDb = await _surah.GetVersesBySurahId(surahId);
+
+            if (versesFromDb == null || !versesFromDb.Any())
+            {
+                return new ApiResponse<List<VersesDto>>(
+                    Success: false,
+                    Message: "No verses found for this surah",
+                    Data: null,
+                    Errors: null,
+                    TraceId: Guid.NewGuid().ToString()
+                );
+            }
+
+            // 3️⃣ Mapping (DTO)
+            var versesDto = versesFromDb.Select(x => new VersesDto
+            {
+                Id = x.Id,
+                Number = x.Number,
+                VersesNumber = x.Number,
+                TextAr = x.TextAr,
+                TextArabicSearch = x.TextArabicSearch
+            }).ToList();
+
+            // 4️⃣ Cache configuration
+            var cacheOptions = new MemoryCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
+                SlidingExpiration = TimeSpan.FromMinutes(5),
+                Priority = CacheItemPriority.High
+            };
+
+            _memory.Set(cacheKey, versesDto, cacheOptions);
+
+            // 5️⃣ Get surah name correctly
+            var surahName =  _surah.GetSurahNameAsync(surahId);
+
             return new ApiResponse<List<VersesDto>>(
-                Success: cachedVerses != null,
-                Message: cachedVerses != null ? $"The verser retrived successfully ,the name of surah is { _surah.GetSurahNameAsync(surahId)}" : "not found verses",
-                Data: cachedVerses,
+                Success: true,
+                Message: $"Verses retrieved successfully for Surah {surahName}",
+                Data: versesDto,
                 Errors: null,
                 TraceId: Guid.NewGuid().ToString()
-                );
+            );
         }
+
 
     }
 }

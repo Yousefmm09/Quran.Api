@@ -17,6 +17,29 @@ builder.Host.UseSerilog((context, services, loggerConfig) =>
         .Enrich.FromLogContext();
 });
 
+// Add CORS policy
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins(
+                "http://localhost:3000",
+                "http://localhost:3001",
+                "https://localhost:3000"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+    
+    // Development policy - allow all origins
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 builder.Services.AddDbContext<AppDb>(options =>
 {
@@ -86,15 +109,19 @@ var app = builder.Build();
 
 
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() &&app.Environment.IsProduction())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
     app.UseMiniProfiler();
+
 }
 
 
 app.UseHttpsRedirection();
+
+// Enable CORS - must be before UseRouting
+app.UseCors(app.Environment.IsDevelopment() && app.Environment.IsProduction() ? "AllowAll" : "AllowFrontend");
 
 app.UseRouting();
 
