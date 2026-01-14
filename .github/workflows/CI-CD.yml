@@ -1,29 +1,42 @@
-name: CI-CD
+name: CI-CD-Production
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" ] # أي push على main يعتبر نشر
+
 jobs:
-  build:
+  build-and-deploy:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 9.0.x
-    
-    - name: Restore
-      run: dotnet restore
-    
-    - name: Build
-      run: dotnet build -c Release --no-restore
-    
-    - name: Publish
-      run: dotnet publish Quran.Api/Quran.Api.csproj -c Release -r win-x64 --self-contained true -o publish
-    
-    - name: Upload Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: Quran.Api
-        path: publish/
+      # 1. Checkout the repo
+      - uses: actions/checkout@v4
+
+      # 2. Setup .NET
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      # 3. Restore dependencies
+      - name: Restore
+        run: dotnet restore
+
+      # 4. Build project
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      # 5. Publish project (self-contained)
+      - name: Publish
+        run: dotnet publish Quran.Api/Quran.Api.csproj -c Release -r win-x64 --self-contained true -o publish
+
+      # 6. Compress artifact
+      - name: Archive Publish Folder
+        run: Compress-Archive -Path publish/* -DestinationPath publish.zip
+
+      # 7. Upload artifact to GitHub (optional for backup)
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Quran.Api
+          path: publish.zip
+
+      
