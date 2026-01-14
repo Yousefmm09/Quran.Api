@@ -109,7 +109,7 @@ var app = builder.Build();
 
 
 
-if (app.Environment.IsDevelopment() &&app.Environment.IsProduction())
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
@@ -121,7 +121,7 @@ if (app.Environment.IsDevelopment() &&app.Environment.IsProduction())
 app.UseHttpsRedirection();
 
 // Enable CORS - must be before UseRouting
-app.UseCors(app.Environment.IsDevelopment() && app.Environment.IsProduction() ? "AllowAll" : "AllowFrontend");
+app.UseCors(app.Environment.IsDevelopment() || app.Environment.IsProduction() ? "AllowAll" : "AllowFrontend");
 
 app.UseRouting();
 
