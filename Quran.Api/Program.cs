@@ -116,15 +116,25 @@ logger.LogInformation("Quran API Starting...");
 logger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
 logger.LogInformation("=================================================");
 
+// Enable Swagger in all environments for API testing
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Quran API v1");
+    c.RoutePrefix = "swagger"; // Access at /swagger
+});
+
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
     app.UseMiniProfiler();
 }
 
 
-app.UseHttpsRedirection();
+// Only use HTTPS redirect if configured (optional for testing)
+if (app.Configuration.GetValue<bool>("UseHttpsRedirection", false))
+{
+    app.UseHttpsRedirection();
+}
 
 // Enable CORS - must be before UseRouting
 var corsPolicy = app.Environment.IsDevelopment() ? "AllowAll" : "AllowFrontend";
@@ -153,7 +163,7 @@ app.Lifetime.ApplicationStarted.Register(() =>
             logger.LogInformation("Listening on: {Address}", address);
         }
     }
-    logger.LogInformation("Swagger UI: {SwaggerUrl}", app.Environment.IsDevelopment() ? "Available at /swagger" : "Disabled in Production");
+    logger.LogInformation("Swagger UI: Available at /swagger");
     logger.LogInformation("=================================================");
 });
 
