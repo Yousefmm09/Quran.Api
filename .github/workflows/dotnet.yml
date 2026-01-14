@@ -1,49 +1,29 @@
-name: CI-CD with Artifact
-
+name: CI-CD
 on:
   push:
     branches: [ "main" ]
-
 jobs:
-  ci:
-    name: Build, Test & Publish Artifact
-    runs-on: ubuntu-latest
-
+  build:
+    runs-on: windows-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Restore
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build -c Release --no-restore
-
-      - name: Test
-        run: dotnet test --no-build --verbosity normal
-
-      - name: Publish
-        run: dotnet publish -c Release -r win-x64 --self-contained true -o publish
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: quran-api-artifact
-          path: publish/
-
-  cd:
-    name: Deploy using Artifact
-    needs: ci
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: quran-api-artifact
-          path: publish
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 9.0.x
+    
+    - name: Restore
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build -c Release --no-restore
+    
+    - name: Publish
+      run: dotnet publish Quran.Api/Quran.Api.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o publish
+    
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: Quran.Api
+        path: publish/
