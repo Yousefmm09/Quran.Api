@@ -1,4 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Hosting.Server;
+using Microsoft.AspNetCore.Hosting.Server.Features;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using Quran.Core;
 using Quran.Infrastructure;
@@ -107,7 +109,12 @@ builder.Services.AddSwaggerGen(c =>
 });
 var app = builder.Build();
 
-
+// Log startup information
+var logger = app.Services.GetRequiredService<ILogger<Program>>();
+logger.LogInformation("=================================================");
+logger.LogInformation("Quran API Starting...");
+logger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
+logger.LogInformation("=================================================");
 
 if (app.Environment.IsDevelopment())
 {
@@ -130,5 +137,24 @@ app.UseRouting();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Log that the application is ready
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    var addresses = app.Services.GetRequiredService<IServer>()
+        .Features.Get<IServerAddressesFeature>()?.Addresses;
+    
+    logger.LogInformation("=================================================");
+    logger.LogInformation("Quran API is now running!");
+    if (addresses != null)
+    {
+        foreach (var address in addresses)
+        {
+            logger.LogInformation("Listening on: {Address}", address);
+        }
+    }
+    logger.LogInformation("Swagger UI: {SwaggerUrl}", app.Environment.IsDevelopment() ? "Available at /swagger" : "Disabled in Production");
+    logger.LogInformation("=================================================");
+});
 
 app.Run();

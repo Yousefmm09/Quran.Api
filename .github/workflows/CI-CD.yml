@@ -24,11 +24,11 @@ jobs:
 
       # 4. Build project
       - name: Build
-        run: dotnet build -c Release --no-restore
+        run: dotnet build Quran.Api/Quran.Api.csproj -c Release --no-restore
 
       # 5. Publish project (self-contained, single file)
       - name: Publish
-        run: dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -o ./publish
+        run: dotnet publish Quran.Api/Quran.Api.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -o ./publish
 
       # 6. Zip published output
       - name: Zip artifact
