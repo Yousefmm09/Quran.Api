@@ -1,37 +1,12 @@
-name: CI-CD .NET API
+name: CI-CD with Artifact
 
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
 
 jobs:
-  build-test:
-    name: Build & Test
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
-      - name: Restore
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build --configuration Release --no-restore
-
-      - name: Test
-        run: dotnet test --no-build --verbosity normal
-
-  deploy:
-    name: Deploy to Server
-    needs: build-test
+  ci:
+    name: Build, Test & Publish Artifact
     runs-on: ubuntu-latest
 
     steps:
@@ -43,5 +18,32 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build -c Release --no-restore
+
+      - name: Test
+        run: dotnet test --no-build --verbosity normal
+
       - name: Publish
         run: dotnet publish -c Release -o publish
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: quran-api-artifact
+          path: publish/
+
+  cd:
+    name: Deploy using Artifact
+    needs: ci
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: quran-api-artifact
+          path: publish
