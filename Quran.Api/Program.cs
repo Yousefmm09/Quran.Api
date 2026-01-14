@@ -109,26 +109,25 @@ var app = builder.Build();
 
 
 
-if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
+if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
     app.UseMiniProfiler();
-
 }
 
 
 app.UseHttpsRedirection();
 
 // Enable CORS - must be before UseRouting
-app.UseCors(app.Environment.IsDevelopment() || app.Environment.IsProduction() ? "AllowAll" : "AllowFrontend");
+var corsPolicy = app.Environment.IsDevelopment() ? "AllowAll" : "AllowFrontend";
+app.UseCors(corsPolicy);
 
 app.UseRouting();
 
 // Global Exception Handling Middleware
 
 app.UseAuthorization();
-app.UseMiniProfiler();
 
 app.MapControllers();
 

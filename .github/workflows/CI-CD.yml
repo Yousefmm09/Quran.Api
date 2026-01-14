@@ -1,7 +1,9 @@
 name: CI-CD-Production
 on:
   push:
-    branches: [ "main" ] # أي push على main يعتبر نشر
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
 
 jobs:
   build-and-deploy:
@@ -24,19 +26,17 @@ jobs:
       - name: Build
         run: dotnet build -c Release --no-restore
 
-      # 5. Publish project (self-contained)
+      # 5. Publish project (self-contained, single file)
       - name: Publish
-        run: dotnet publish Quran.Api/Quran.Api.csproj -c Release -r win-x64 --self-contained true -o publish
+        run: dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:PublishTrimmed=false -o ./publish
 
-      # 6. Compress artifact
-      - name: Archive Publish Folder
-        run: Compress-Archive -Path publish/* -DestinationPath publish.zip
+      # 6. Zip published output
+      - name: Zip artifact
+        run: Compress-Archive -Path ./publish/* -DestinationPath publish.zip
 
-      # 7. Upload artifact to GitHub (optional for backup)
+      # 7. Upload artifact to GitHub
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Quran.Api
           path: publish.zip
-
-      
