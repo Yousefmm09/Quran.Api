@@ -22,26 +22,18 @@ builder.Host.UseSerilog((context, services, loggerConfig) =>
 // Add CORS policy
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend", policy =>
+    options.AddPolicy("FrontendPolicy", policy =>
     {
         policy.WithOrigins(
-                "http://localhost:3000",
-                "http://localhost:5173",
-                "https://localhost:3000"
+                "http://localhost:5173",   // Vite
+                "http://127.0.0.1:5173",
+                "http://localhost:3000"    // React
             )
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
-    });
-    
-    // Development policy - allow all origins
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
 });
+
 
 builder.Services.AddDbContext<AppDb>(options =>
 {
@@ -137,14 +129,10 @@ if (app.Configuration.GetValue<bool>("UseHttpsRedirection", false))
 }
 
 // Enable CORS - must be before UseRouting
-var corsPolicy = app.Environment.IsProduction() ? "AllowAll" : "AllowFrontend";
-app.UseCors(corsPolicy);
-
-app.UseRouting();
-
-// Global Exception Handling Middleware
+app.UseCors("FrontendPolicy");
 
 app.UseAuthorization();
+
 
 app.MapControllers();
 
