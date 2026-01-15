@@ -130,14 +130,14 @@ if (app.Environment.IsDevelopment())
 }
 
 
-// Only use HTTPS redirect if configured (optional for testing)
+// Only use HTTPS redirect if configured 
 if (app.Configuration.GetValue<bool>("UseHttpsRedirection", false))
 {
     app.UseHttpsRedirection();
 }
 
 // Enable CORS - must be before UseRouting
-var corsPolicy = app.Environment.IsDevelopment() ? "AllowAll" : "AllowFrontend";
+var corsPolicy = app.Environment.IsProduction() ? "AllowAll" : "AllowFrontend";
 app.UseCors(corsPolicy);
 
 app.UseRouting();
